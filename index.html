@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F6F0EE" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#181314" media="(prefers-color-scheme: dark)">
+<title>Rhythm Patch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F6F0EE; --surface:#FFFFFF; --paper:#FFF6F4;
+  --grid-minor:#F6D4CD; --grid-major:#E9A094; --trace:#1D2942;
+  --ink:#1D2942; --muted:#5B6274; --line:#E6D8D4;
+  --accent:#27458F; --accent-ink:#FFFFFF; --accent-soft:#E4E9F6;
+  --ok:#1C735D; --warn:#A24F17; --alert:#AE261D; --alert-bg:#FBE6E3;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#181314; --surface:#221B1C; --paper:#1D1617;
+    --grid-minor:#35252A; --grid-major:#5A353B; --trace:#F5ECEA;
+    --ink:#F5ECEA; --muted:#B4AAAD; --line:#3A2E30;
+    --accent:#A9BCF3; --accent-ink:#121A33; --accent-soft:#2A3150;
+    --ok:#62C7A8; --warn:#E9A266; --alert:#F48A80; --alert-bg:#3A1E1D;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#181314; --surface:#221B1C; --paper:#1D1617;
+  --grid-minor:#35252A; --grid-major:#5A353B; --trace:#F5ECEA;
+  --ink:#F5ECEA; --muted:#B4AAAD; --line:#3A2E30;
+  --accent:#A9BCF3; --accent-ink:#121A33; --accent-soft:#2A3150;
+  --ok:#62C7A8; --warn:#E9A266; --alert:#F48A80; --alert-bg:#3A1E1D;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-size:17px;line-height:1.45}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+.app{max-width:460px;margin:0 auto;padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);
+  display:flex;align-items:center;justify-content:space-between;padding:14px 20px 10px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.brand{font-weight:700;font-size:1.05rem;display:flex;align-items:center;gap:8px}
+.brand svg{width:22px;height:22px}
+.chip{display:inline-flex;align-items:center;gap:7px;font-size:.85rem;color:var(--muted);
+  border:1px solid var(--line);border-radius:999px;padding:4px 11px;background:var(--surface)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.dot.sim{background:var(--accent)}
+.dot.off{background:var(--muted)}
+
+/* now screen */
+.view{display:none}
+.view.on{display:block}
+.reading{padding:8px 20px 18px;display:grid;grid-template-columns:auto 1fr;column-gap:18px;align-items:end}
+.rate{display:flex;align-items:baseline;gap:6px}
+.rate b{font-size:4.6rem;line-height:.9;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em;min-width:2ch}
+.rate span{color:var(--muted)}
+.heart{width:26px;height:26px;color:var(--alert);transition:transform .12s ease-out;align-self:center;margin-left:4px}
+.heart.beat{transform:scale(1.25)}
+.status h1{margin:0;font-size:1.4rem;line-height:1.2}
+.status p{margin:4px 0 0;color:var(--muted);font-size:.95rem}
+.tone-ok{color:var(--ok)} .tone-warn{color:var(--warn)} .tone-alert{color:var(--alert)} .tone-muted{color:var(--muted)}
+
+.strip{background:var(--paper);border-block:1px solid var(--line)}
+.strip canvas{display:block;width:100%}
+.strip-cap{display:flex;justify-content:space-between;padding:6px 20px 0;font-size:.8rem;color:var(--muted)}
+
+.alert{margin:16px 20px 0;padding:14px 16px;border-radius:12px;background:var(--alert-bg);
+  border-left:4px solid var(--alert);font-size:.95rem}
+.alert strong{display:block;margin-bottom:2px}
+.alert[hidden]{display:none}
+
+.act{padding:18px 20px 0}
+.btn{appearance:none;border:0;cursor:pointer;border-radius:14px;font-weight:700}
+.btn-main{width:100%;min-height:58px;background:var(--accent);color:var(--accent-ink);font-size:1.1rem}
+.btn-quiet{min-height:48px;padding:0 18px;background:var(--accent-soft);color:var(--ink)}
+.btn-line{min-height:48px;padding:0 18px;background:transparent;border:1.5px solid var(--line)}
+.hint{color:var(--muted);font-size:.9rem;margin:8px 2px 0}
+
+.facts{display:flex;gap:28px;padding:22px 20px 0;color:var(--muted);font-size:.9rem}
+.facts b{display:block;color:var(--ink);font-size:1.15rem;font-variant-numeric:tabular-nums}
+
+/* sections */
+.sec{padding:8px 20px 4px}
+.sec h2{font-size:1.25rem;margin:10px 0 12px}
+.sec h3{font-size:1rem;margin:22px 0 8px}
+.muted{color:var(--muted)}
+.small{font-size:.88rem}
+
+/* events */
+.events{list-style:none;margin:0;padding:0}
+.events li{border-top:1px solid var(--line)}
+.events li:last-child{border-bottom:1px solid var(--line)}
+.ev{display:block;width:100%;text-align:left;background:none;border:0;padding:14px 0;cursor:pointer}
+.ev-head{display:flex;justify-content:space-between;gap:12px}
+.ev-title{font-weight:700}
+.ev-time{color:var(--muted);font-size:.9rem;white-space:nowrap}
+.ev-sub{color:var(--muted);font-size:.92rem;margin-top:2px}
+.ev canvas{display:block;width:100%;height:64px;margin-top:10px;border-radius:6px;background:var(--paper)}
+.mark{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:8px;vertical-align:1px}
+.empty{padding:28px 0;color:var(--muted)}
+
+/* summary */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:18px 12px}
+.stats div{font-size:.9rem;color:var(--muted)}
+.stats b{display:block;font-size:1.6rem;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.15}
+#trend{display:block;width:100%;height:170px}
+.bars{display:grid;gap:10px}
+.bar-row{display:grid;grid-template-columns:8.5rem 1fr 3.6rem;align-items:center;gap:10px;font-size:.92rem}
+.bar{height:10px;border-radius:5px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:5px}
+.bar-row span:last-child{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+
+/* pad */
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1.5px solid var(--line);border-radius:12px;padding:3px;gap:3px}
+.seg button{border:0;background:none;min-height:42px;border-radius:9px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:700}
+.opts{display:grid;gap:2px;margin-top:6px}
+.opt{display:flex;gap:12px;align-items:flex-start;padding:10px 0;cursor:pointer}
+.opt input{margin-top:5px;accent-color:var(--accent);width:18px;height:18px}
+.opt small{display:block;color:var(--muted)}
+.switch{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0}
+.switch input{width:46px;height:26px;accent-color:var(--accent)}
+.now-playing{font-size:.92rem;color:var(--muted);margin:0 0 4px}
+.note{font-size:.88rem;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;margin-top:22px}
+code{font-size:.85em;background:var(--accent-soft);padding:1px 5px;border-radius:4px}
+
+/* nav */
+nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:460px;z-index:6;
+  background:var(--surface);border-top:1px solid var(--line);
+  display:grid;grid-template-columns:repeat(4,1fr);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav button{background:none;border:0;padding:9px 0 10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.78rem;color:var(--muted);position:relative}
+nav svg{width:24px;height:24px}
+nav button[aria-current="page"]{color:var(--accent);font-weight:700}
+.badge{position:absolute;top:5px;left:calc(50% + 6px);min-width:18px;height:18px;border-radius:9px;background:var(--alert);color:#fff;font-size:.72rem;line-height:18px;text-align:center;padding:0 4px}
+.badge[hidden]{display:none}
+
+/* dialogs */
+dialog{border:0;padding:0;width:100%;max-width:460px;margin:auto auto 0;border-radius:20px 20px 0 0;
+  background:var(--surface);color:var(--ink);max-height:90vh}
+dialog::backdrop{background:rgba(20,12,14,.45)}
+.sheet{padding:22px 20px calc(20px + env(safe-area-inset-bottom,0px))}
+.sheet h2{margin:0 0 4px;font-size:1.25rem}
+.sym{display:grid;gap:8px;margin:16px 0}
+.sym button{min-height:52px;text-align:left;padding:0 16px;border-radius:12px;border:1.5px solid var(--line);background:none;cursor:pointer}
+.scroll{overflow-x:auto;margin:14px -20px 6px;background:var(--paper);border-block:1px solid var(--line)}
+.scroll canvas{display:block}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+
+.toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
+  background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:.92rem;z-index:20;max-width:90vw}
+.toast[hidden]{display:none}
+@media (prefers-reduced-motion: reduce){.heart{transition:none}.heart.beat{transform:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12h4l2-5 4 10 2-5h8"/></svg>
+      Rhythm Patch
+    </div>
+    <span class="chip" id="sourceChip"><span class="dot sim"></span><span>Simulated data</span></span>
+  </header>
+
+  <!-- NOW -->
+  <main id="view-now" class="view on">
+    <section class="reading" aria-live="polite">
+      <div class="rate">
+        <b id="hr">--</b><span>bpm</span>
+        <svg id="heart" class="heart" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.2 3 4.5 6.6 4.5c2.1 0 3.6 1.2 5.4 3.1 1.8-1.9 3.3-3.1 5.4-3.1C21 4.5 23.1 8.2 21.6 11.7 19.5 16.4 12 21 12 21Z"/></svg>
+      </div>
+      <div></div>
+      <div class="status" style="grid-column:1/-1;margin-top:14px">
+        <h1 id="statusTitle" class="tone-muted">Reading your rhythm…</h1>
+        <p id="statusDetail">Hold still for a few seconds while the pad settles.</p>
+      </div>
+    </section>
+
+    <div class="strip"><canvas id="live" height="150" aria-label="Live ECG trace"></canvas></div>
+    <div class="strip-cap"><span>Single lead, 25 mm/s, 10 mm/mV</span><span id="quality">Signal good</span></div>
+
+    <div class="alert" id="alert" role="alert" hidden>
+      <strong>Your rhythm looks irregular</strong>
+      If you feel unwell, sit down and contact your care team. Call 911 for chest pain, fainting, or trouble breathing.
+    </div>
+
+    <div class="act">
+      <button class="btn btn-main" id="feelBtn">I feel something</button>
+      <p class="hint">Saves the last 10 seconds of your heart rhythm with your symptom.</p>
+    </div>
+
+    <div class="facts">
+      <div>Monitoring<b id="factTime">0:00</b></div>
+      <div>Beats read<b id="factBeats">0</b></div>
+      <div>Events<b id="factEvents">0</b></div>
+    </div>
+  </main>
+
+  <!-- EVENTS -->
+  <section id="view-events" class="view">
+    <div class="sec">
+      <h2>Events</h2>
+      <ul class="events" id="eventList"></ul>
+    </div>
+  </section>
+
+  <!-- SUMMARY -->
+  <section id="view-summary" class="view">
+    <div class="sec">
+      <h2>This session</h2>
+      <div class="stats">
+        <div><b id="sAvg">--</b>Average bpm</div>
+        <div><b id="sRange">--</b>Lowest to highest</div>
+        <div><b id="sBurden">0%</b>Time in irregular rhythm</div>
+        <div><b id="sDur">0:00</b>Monitored</div>
+      </div>
+      <h3>Heart rate</h3>
+      <canvas id="trend" aria-label="Heart rate trend"></canvas>
+      <h3>Time in each rhythm</h3>
+      <div class="bars" id="bars"></div>
+      <h3>Share with your care team</h3>
+      <p class="muted small" style="margin:0 0 12px">Creates a report with your heart rate and every saved ECG strip, in the FHIR format patient portals use.</p>
+      <div class="row">
+        <button class="btn btn-main" id="exportBtn" style="width:auto;padding:0 22px">Save report</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAD -->
+  <section id="view-pad" class="view">
+    <div class="sec">
+      <h2>Pad</h2>
+      <div class="seg" role="group" aria-label="Data source">
+        <button id="srcSim" aria-pressed="true">Simulated pad</button>
+        <button id="srcBle" aria-pressed="false">Bluetooth pad</button>
+      </div>
+
+      <div id="simPanel">
+        <h3>Simulation</h3>
+        <label class="switch"><span>Guided demo<br><small class="muted">Cycles through each rhythm automatically</small></span>
+          <input type="checkbox" id="guided" checked></label>
+        <p class="now-playing" id="nowPlaying"></p>
+        <div class="opts" id="scenarios" role="radiogroup" aria-label="Rhythm to simulate"></div>
+      </div>
+
+      <div id="blePanel" hidden>
+        <h3>Connect your pad</h3>
+        <p class="muted small" id="bleStatus">Not connected.</p>
+        <button class="btn btn-main" id="bleBtn" style="width:auto;padding:0 22px">Connect pad</button>
+        <p class="note">The pad firmware should stream ECG samples at 250 Hz over the Nordic UART service (<code>6e400001-…</code>) as comma-separated ADC counts. The app assumes an AD8232 input and a 3.3 V ADC, with sample values converted to millivolts.</p>
+      </div>
+
+      <h3>Session</h3>
+      <button class="btn btn-line" id="restartBtn">Restart session</button>
+
+      <p class="note">Rhythm Patch is a BMEN 353 student prototype for demonstration only. It is not a medical device and does not diagnose any condition.</p>
+    </div>
+  </section>
+</div>
+
+<nav aria-label="Main">
+  <button data-tab="now" aria-current="page">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12h4l2-5 4 10 2-5h8"/></svg>Now
+  </button>
+  <button data-tab="events">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Events
+  </button>
+  <button data-tab="summary">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Summary
+  </button>
+  <button data-tab="pad">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8 8h8v8H8z"/></svg>Pad
+  </button>
+</nav>
+
+<dialog id="feelDlg">
+  <form method="dialog" class="sheet">
+    <h2>What are you feeling?</h2>
+    <p class="muted small" style="margin:0">Your rhythm from the last 10 seconds will be saved with it.</p>
+    <div class="sym" id="symList"></div>
+    <button class="btn btn-line" value="cancel" style="width:100%">Cancel</button>
+  </form>
+</dialog>
+
+<dialog id="evDlg">
+  <form method="dialog" class="sheet">
+    <h2 id="evDlgTitle"></h2>
+    <p class="muted small" id="evDlgSub" style="margin:0"></p>
+    <div class="scroll"><canvas id="evCanvas"></canvas></div>
+    <p class="muted small" style="margin:0 0 16px">Scroll sideways to see all 10 seconds. Small ticks mark each detected beat.</p>
+    <button class="btn btn-line" value="close" style="width:100%">Close</button>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+"use strict";
+const FS = 250;
+const RING = FS * 12;
+const COUNTS_PER_MV = 1365;
+const NUS_SERVICE = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+const NUS_TX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
+
+const STATUS = {
+  learning: {title:"Reading your rhythm…", detail:"Hold still for a few seconds while the pad settles.", tone:"muted"},
+  normal:   {title:"Regular rhythm", detail:"Your heart rhythm looks steady.", tone:"ok"},
+  afib:     {title:"Irregular rhythm", detail:"The beat-to-beat pattern is consistent with atrial fibrillation.", tone:"alert"},
+  ectopic:  {title:"Extra beats", detail:"Some beats are arriving early, followed by a pause.", tone:"warn"},
+  brady:    {title:"Slow heart rate", detail:"Your heart rate is below 50 beats per minute.", tone:"warn"},
+  tachy:    {title:"Fast heart rate", detail:"Your heart rate is above 100 beats per minute.", tone:"warn"},
+  noise:    {title:"Check pad contact", detail:"The signal is too noisy to read. Press the pad onto clean, dry skin.", tone:"muted"},
+  nosignal: {title:"No signal", detail:"No heartbeats found. Check that the pad is on and touching your skin.", tone:"muted"}
+};
+const FLAGGED = ["afib","ectopic","brady","tachy"];
+const SCENARIOS = [
+  ["normal","Normal sinus rhythm","About 72 bpm with normal breathing variation"],
+  ["pvc","Premature beats (PVCs)","Early, wide beats followed by a pause"],
+  ["afib","Atrial fibrillation","Irregularly irregular, no P waves"],
+  ["brady","Sinus bradycardia","About 44 bpm"],
+  ["tachy","Sinus tachycardia","About 124 bpm"],
+  ["loose","Loose pad","Movement and poor skin contact"]
+];
+const GUIDED = [["normal",20],["pvc",25],["afib",35],["normal",15],["tachy",15],["loose",10]];
+const SYMPTOMS = ["Palpitations or fluttering","Dizzy or lightheaded","Chest discomfort","Short of breath","Tired or weak"];
+
+function randn(){ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+const median = a => { const s=[...a].sort((x,y)=>x-y); return s.length ? s[s.length>>1] : 0; };
+const mean = a => a.reduce((x,y)=>x+y,0)/(a.length||1);
+
+const g = (d,c,w,a) => a*Math.exp(-((d-c)*(d-c))/(2*w*w));
+function beatWave(d,b){
+  if (b.type === "V")
+    return g(d,0,0.032,1.25) + g(d,0.075,0.03,-0.55) + g(d,0.34,0.075,-0.32);
+  const k = Math.sqrt(Math.min(Math.max(b.rr,0.4),1.4));
+  let v = g(d,-0.025,0.009,-0.10) + g(d,0,0.011,1.10) + g(d,0.03,0.011,-0.24) + g(d,0.27*k,0.055*k,0.27);
+  if (b.hasP) v += g(d,-0.17,0.024,0.13);
+  return v;
+}
+class Sim {
+  constructor(){ this.i=0; this.beats=[{t0:0.4,rr:0.83,type:"N",hasP:true}]; }
+  scenario(t){
+    if (!S.guided) return S.scenario;
+    const total = GUIDED.reduce((a,x)=>a+x[1],0); let r = t % total;
+    for (const [k,d] of GUIDED){ if (r < d) return k; r -= d; }
+    return "normal";
+  }
+  guidedInfo(){
+    const t=this.i/FS, total=GUIDED.reduce((a,x)=>a+x[1],0); let r=t%total;
+    for (const [k,d] of GUIDED){ if (r<d) return {k, left:Math.ceil(d-r)}; r-=d; }
+    return {k:"normal",left:0};
+  }
+  next(prev){
+    const sc = this.scenario(prev.t0);
+    if (sc === "afib") return {t0:prev.t0+0.36+Math.random()*0.58, rr:0.65, type:"N", hasP:false};
+    let base = sc==="brady" ? 60/44 : sc==="tachy" ? 60/124 : 60/72;
+    base *= 1 + 0.035*Math.sin(2*Math.PI*0.25*prev.t0);
+    let rr = base + randn()*0.008, type = "N";
+    if (sc === "pvc"){
+      if (prev.type === "V") rr = base*1.38;
+      else if (Math.random() < 0.2){ rr = base*0.62; type = "V"; }
+    }
+    return {t0:prev.t0+rr, rr, type, hasP: type!=="V"};
+  }
+  sample(){
+    const t = this.i/FS;
+    let last = this.beats[this.beats.length-1];
+    while (last.t0 < t+1){ last = this.next(last); this.beats.push(last); }
+    while (this.beats.length > 2 && this.beats[0].t0 < t-1) this.beats.shift();
+    let v = 0;
+    for (const b of this.beats){ const d=t-b.t0; if (d>-0.35 && d<0.75) v += beatWave(d,b); }
+    const sc = this.scenario(t);
+    v += 0.06*Math.sin(2*Math.PI*0.27*t) + randn()*0.012;
+    if (sc==="afib")  v += 0.04*Math.sin(2*Math.PI*5.6*t) + 0.025*Math.sin(2*Math.PI*7.1*t+1);
+    if (sc==="loose") v += 0.55*Math.sin(2*Math.PI*0.35*t) + 0.3*Math.sin(2*Math.PI*1.3*t+0.5) + randn()*0.16;
+    this.i++;
+    return v;
+  }
+}
+
+class Detector {
+  constructor(){
+    this.n=0; this.hp=0; this.px=0;
+    this.hpR=new Float32Array(RING); this.lpR=new Float32Array(RING);
+    this.mwiQ=new Float32Array(38); this.mwiSum=0; this.m1=0; this.m2=0;
+    this.spki=0; this.npki=0; this.lmax=0;
+    this.lastR=-1e9; this.peaks=[]; this.resid=[];
+  }
+  push(x){
+    const n=this.n, at=j=>((j%RING)+RING)%RING;
+    this.hp = 0.985*(this.hp + x - this.px); this.px = x;
+    this.hpR[at(n)] = this.hp;
+    let lp=0; for (let k=0;k<5;k++) lp += this.hpR[at(n-k)]; lp/=5;
+    this.lpR[at(n)] = lp;
+    const d = lp - this.lpR[at(n-2)];
+    const sq = d*d*1e4;
+    this.mwiSum += sq - this.mwiQ[n%38]; this.mwiQ[n%38] = sq;
+    const mwi = Math.max(this.mwiSum/38, 0);
+    this.resid.push(Math.abs(this.hp - lp));
+
+    if (n < 2*FS){
+      this.lmax = Math.max(this.lmax, mwi);
+      if (n === 2*FS-1){ this.spki = 0.5*this.lmax; this.npki = 0.08*this.lmax; }
+    } else {
+      if (this.m1 > this.m2 && this.m1 >= mwi){
+        const pk = this.m1, thr = this.npki + 0.25*(this.spki - this.npki);
+        if (n-1 - this.lastR > 0.3*FS){
+          if (pk > thr){
+            let best=n-1, bv=-1;
+            for (let j=n-1; j>=n-1-Math.round(0.2*FS); j--){ const v=Math.abs(this.hpR[at(j)]); if (v>bv){bv=v;best=j;} }
+            if (best - this.lastR > 0.27*FS){ this.lastR = best; this.peaks.push(best); if (this.onBeat) this.onBeat(best); }
+            this.spki = 0.125*pk + 0.875*this.spki;
+          } else this.npki = 0.125*pk + 0.875*this.npki;
+        }
+      }
+      if (n - this.lastR > 1.6*FS) this.spki *= 0.9995;
+    }
+    this.m2 = this.m1; this.m1 = mwi; this.n++;
+    if (this.peaks.length > 300) this.peaks.splice(0,150);
+  }
+  window(seconds, endN=this.n){
+    const len=Math.round(seconds*FS), out=new Float32Array(len), start=endN-len;
+    for (let i=0;i<len;i++){ const j=start+i; out[i] = j<0 ? 0 : this.hpR[((j%RING)+RING)%RING]; }
+    return {data:out, peaks:this.peaks.filter(p=>p>=start && p<endN).map(p=>p-start)};
+  }
+}
+
+function classify(peaks, n, noise){
+  const quality = noise < 0.035 ? "good" : noise < 0.06 ? "fair" : "poor";
+  if (n < 6*FS) return {status:"learning", hr:null, quality};
+  if (quality === "poor") return {status:"noise", hr:null, quality};
+  const pk = peaks.filter(p => p > n-15*FS);
+  if (!pk.length || n - pk[pk.length-1] > 4*FS) return {status:"nosignal", hr:null, quality};
+  const last = pk.slice(-13), rr = [];
+  for (let i=1;i<last.length;i++) rr.push((last[i]-last[i-1])/FS);
+  if (rr.length < 6) return {status:"learning", hr:null, quality};
+  const med = median(rr), hr = 60/mean(rr.slice(-8));
+  const skip = new Set(); let ectopic = 0;
+  for (let i=0;i<rr.length-1;i++)
+    if (rr[i] < 0.82*med && rr[i+1] > 1.12*med && Math.abs(rr[i]+rr[i+1]-2*med) < 0.15*med){ ectopic++; skip.add(i); skip.add(i+1); }
+  const diffs = [];
+  for (let i=1;i<rr.length;i++) if (!skip.has(i) && !skip.has(i-1)) diffs.push(rr[i]-rr[i-1]);
+  const frac = diffs.length ? diffs.filter(d=>Math.abs(d) > 0.1*med).length/diffs.length : 0;
+  const nrmssd = diffs.length ? Math.sqrt(mean(diffs.map(d=>d*d)))/med : 0;
+  let status;
+  if (diffs.length >= 4 && frac > 0.5 && nrmssd > 0.1) status = "afib";
+  else if (ectopic >= 1) status = "ectopic";
+  else if (hr < 50) status = "brady";
+  else if (hr > 100) status = "tachy";
+  else status = "normal";
+  return {status, hr, quality, nrmssd};
+}
+
+const S = {
+  source:"sim", scenario:"normal", guided:true,
+  tab:"now", startWall:new Date(), noise:0,
+  status:"learning", stable:"learning", hist:[], hr:null, quality:"good",
+  events:[], episode:null, trend:[], tally:{}, beats:0, unseen:0,
+  bleQueue:[], bleDevice:null
+};
+let sim = new Sim(), det = new Detector();
+det.onBeat = onBeat;
+const $ = s => document.querySelector(s);
+
+function onBeat(){
+  S.beats++;
+  const h=$("#heart"); h.classList.add("beat"); setTimeout(()=>h.classList.remove("beat"),140);
+}
+
+function analyze(){
+  S.noise = 0.5*S.noise + 0.5*median(det.resid); det.resid = [];
+  const r = classify(det.peaks, det.n, S.noise);
+  S.status = r.status; S.quality = r.quality;
+  if (r.hr) S.hr = r.hr; else if (["noise","nosignal"].includes(r.status)) S.hr = null;
+
+  S.hist.push(r.status); if (S.hist.length > 4) S.hist.shift();
+  const need = ["noise","nosignal","learning"].includes(r.status) ? 2 : 3;
+  if (S.stable === "learning" && r.status !== "learning" && S.hist.length >= 2 && S.hist.slice(-2).every(x=>x===r.status)) S.stable = r.status;
+  else if (S.hist.filter(x=>x===r.status).length >= need) S.stable = r.status;
+
+  const sec = Math.floor(det.n/FS);
+  if (S.stable !== "learning") S.tally[S.stable] = (S.tally[S.stable]||0) + 1;
+
+  if (FLAGGED.includes(S.stable)){
+    if (S.episode && S.episode.type === S.stable){
+      const ep=S.episode; ep.duration++;
+      if (S.hr){ ep.hrSum += S.hr; ep.hrN++; }
+      if (ep.duration === 8){ Object.assign(ep, det.window(10)); }
+      ep.detail = episodeDetail(ep);
+      if (S.tab==="events") renderEvents();
+    } else {
+      const ep = Object.assign({id:Date.now(), kind:"auto", type:S.stable, title:STATUS[S.stable].title,
+        wall:new Date(), duration:1, hrSum:S.hr||0, hrN:S.hr?1:0}, det.window(10));
+      ep.detail = episodeDetail(ep);
+      S.events.unshift(ep); S.episode = ep; S.unseen++;
+      renderEvents(); 
+    }
+  } else S.episode = null;
+
+  if (sec % 5 === 0 && S.hr && !["noise","nosignal","learning"].includes(S.stable)) S.trend.push({t:sec, hr:S.hr});
+  renderNow();
+  if (S.tab==="summary") renderSummary();
+  if (S.tab==="pad") renderNowPlaying();
+}
+function episodeDetail(ep){
+  const avg = ep.hrN ? Math.round(ep.hrSum/ep.hrN) : null;
+  return `Lasted ${fmtDur(ep.duration)}` + (avg ? `, average ${avg} bpm` : "");
+}
+
+let colors = {};
+function readColors(){
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of ["paper","grid-minor","grid-major","trace","muted","ok","warn","alert","line","ink"]) colors[k] = cs.getPropertyValue("--"+k).trim();
+  gridCache = {};
+}
+let gridCache = {};
+function gridFor(w,h,mm,dpr){
+  const key=[w,h,mm,dpr].join("x");
+  if (gridCache[key]) return gridCache[key];
+  const c=document.createElement("canvas"); c.width=w*dpr; c.height=h*dpr;
+  const x=c.getContext("2d"); x.scale(dpr,dpr);
+  x.fillStyle=colors.paper; x.fillRect(0,0,w,h);
+  for (const major of [false,true]){
+    x.strokeStyle = major ? colors["grid-major"] : colors["grid-minor"];
+    x.lineWidth = major ? 1 : 0.6; x.beginPath();
+    const step = major ? mm*5 : mm;
+    for (let gx=0; gx<=w; gx+=step){ x.moveTo(Math.round(gx)+.5,0); x.lineTo(Math.round(gx)+.5,h); }
+    for (let gy=h; gy>=0; gy-=step){ x.moveTo(0,Math.round(gy)+.5); x.lineTo(w,Math.round(gy)+.5); }
+    x.stroke();
+  }
+  return gridCache[key]=c;
+}
+function drawStrip(canvas, win, opt={}){
+  const dpr = window.devicePixelRatio||1;
+  const w = opt.width || canvas.clientWidth, h = opt.height || canvas.clientHeight;
+  if (!w || !h) return;
+  if (canvas.width !== Math.round(w*dpr) || canvas.height !== Math.round(h*dpr)){
+    canvas.width=Math.round(w*dpr); canvas.height=Math.round(h*dpr);
+    if (opt.width){ canvas.style.width=w+"px"; canvas.style.height=h+"px"; }
+  }
+  const x = canvas.getContext("2d"); x.setTransform(dpr,0,0,dpr,0,0);
+  const secs = win.data.length/FS, mm = w/(secs*25);
+  if (opt.grid !== false) x.drawImage(gridFor(w,h,mm,dpr),0,0,w,h);
+  else { x.clearRect(0,0,w,h); }
+  const mid = h*0.62, ppv = 10*mm, ppx = w/win.data.length;
+  x.strokeStyle = colors.trace; x.lineWidth = opt.thin ? 1.2 : 1.8; x.lineJoin="round";
+  x.beginPath();
+  for (let i=0;i<win.data.length;i++){
+    const y = Math.max(2, Math.min(h-2, mid - win.data[i]*ppv));
+    i ? x.lineTo(i*ppx, y) : x.moveTo(0, y);
+  }
+  x.stroke();
+  if (opt.ticks !== false){
+    x.fillStyle = colors.muted;
+    for (const p of win.peaks) x.fillRect(p*ppx-1, 4, 2, Math.max(5, mm*1.6));
+  }
+}
+function drawLive(){
+  const c = $("#live"), w = c.clientWidth;
+  const h = Math.round(Math.min(190, Math.max(130, w*0.38)));
+  if (c.style.height !== h+"px") c.style.height = h+"px";
+  drawStrip(c, det.window(5));
+}
+
+function fmtDur(s){ s=Math.round(s); const m=Math.floor(s/60), r=s%60; return m ? `${m} min ${r} s` : `${r} s`; }
+function fmtClock(s){ s=Math.floor(s); const h=Math.floor(s/3600), m=Math.floor(s/60)%60, r=s%60; return (h?h+":"+String(m).padStart(2,"0"):m)+":"+String(r).padStart(2,"0"); }
+const fmtTime = d => d.toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
+
+function renderNow(){
+  const st = STATUS[S.stable];
+  $("#hr").textContent = S.hr && !["noise","nosignal","learning"].includes(S.stable) ? Math.round(S.hr) : "--";
+  const t = $("#statusTitle"); t.textContent = st.title; t.className = "tone-"+st.tone;
+  $("#statusDetail").textContent = st.detail;
+  $("#quality").textContent = {good:"Signal good", fair:"Signal fair", poor:"Signal poor"}[S.quality];
+  $("#alert").hidden = S.stable !== "afib";
+  $("#factTime").textContent = fmtClock(det.n/FS);
+  $("#factBeats").textContent = S.beats;
+  $("#factEvents").textContent = S.events.length;
+}
+
+function toneColor(type){
+  const tone = STATUS[type] ? STATUS[type].tone : "ok";
+  return colors[tone] || colors.accent || colors.ink;
+}
+function renderEvents(){
+  if (S.tab !== "events") { renderNow(); return; }
+  const ul = $("#eventList");
+  if (!S.events.length){ ul.innerHTML = `<li class="empty">No events yet. Rhythm changes the app flags, and symptoms you record with “I feel something,” will appear here.</li>`; return; }
+  ul.innerHTML = "";
+  S.events.forEach(ev => {
+    const li = document.createElement("li");
+    const color = ev.kind==="symptom" ? colors.ink : toneColor(ev.type);
+    li.innerHTML = `<button class="ev"><div class="ev-head"><span class="ev-title"><span class="mark" style="background:${color}"></span></span><span class="ev-time"></span></div><div class="ev-sub"></div><canvas aria-label="Event strip"></canvas></button>`;
+    li.querySelector(".ev-title").append(ev.title);
+    li.querySelector(".ev-time").textContent = fmtTime(ev.wall);
+    li.querySelector(".ev-sub").textContent = ev.detail;
+    li.querySelector("button").addEventListener("click", ()=>openEvent(ev));
+    ul.append(li);
+    const c = li.querySelector("canvas");
+    const tail = {data: ev.data.slice(-FS*4), peaks: ev.peaks.map(p=>p-(ev.data.length-FS*4)).filter(p=>p>=0)};
+    drawStrip(c, tail, {ticks:false, thin:true});
+  });
+}
+function openEvent(ev){
+  $("#evDlgTitle").textContent = ev.title;
+  $("#evDlgSub").textContent = `${fmtTime(ev.wall)}. ${ev.detail}`;
+  $("#evDlg").showModal();
+  drawStrip($("#evCanvas"), ev, {width:1000, height:170});
+}
+
+function renderSummary(){
+  const hrs = S.trend.map(p=>p.hr);
+  $("#sAvg").textContent = hrs.length ? Math.round(mean(hrs)) : "--";
+  $("#sRange").textContent = hrs.length ? `${Math.round(Math.min(...hrs))}–${Math.round(Math.max(...hrs))}` : "--";
+  const readable = Object.entries(S.tally).filter(([k])=>!['noise','nosignal'].includes(k)).reduce((a,[,v])=>a+v,0);
+  $("#sBurden").textContent = readable ? Math.round(100*(S.tally.afib||0)/readable)+"%" : "0%";
+  $("#sDur").textContent = fmtClock(det.n/FS);
+
+  const c=$("#trend"), dpr=window.devicePixelRatio||1, w=c.clientWidth, h=c.clientHeight;
+  if (w){
+    c.width=w*dpr; c.height=h*dpr; const x=c.getContext("2d"); x.scale(dpr,dpr); x.clearRect(0,0,w,h);
+    const lo=30, hi=170, L=34, y=v=>h-18-(v-lo)/(hi-lo)*(h-28);
+    x.font="12px "+getComputedStyle(document.body).fontFamily; x.fillStyle=colors.muted; x.strokeStyle=colors.line; x.lineWidth=1;
+    for (const v of [50,100,150]){ x.beginPath(); x.moveTo(L,Math.round(y(v))+.5); x.lineTo(w,Math.round(y(v))+.5); x.stroke(); x.fillText(v,4,y(v)+4); }
+    if (S.trend.length>1){
+      const t0=S.trend[0].t, t1=Math.max(S.trend[S.trend.length-1].t, t0+60), px=t=>L+6+(t-t0)/(t1-t0)*(w-L-12);
+      x.strokeStyle=colors.trace; x.lineWidth=2; x.lineJoin="round"; x.beginPath();
+      S.trend.forEach((p,i)=> i ? x.lineTo(px(p.t),y(p.hr)) : x.moveTo(px(p.t),y(p.hr))); x.stroke();
+      x.fillStyle=colors.muted; x.fillText("Last "+fmtDur(t1-t0), L+6, h-2);
+    } else { x.fillText("Collecting heart rate…", L+6, h/2); }
+  }
+  const total = Object.values(S.tally).reduce((a,b)=>a+b,0) || 1;
+  const order = ["normal","ectopic","afib","brady","tachy","noise","nosignal"];
+  const names = {normal:"Regular",ectopic:"Extra beats",afib:"Irregular",brady:"Slow",tachy:"Fast",noise:"Unreadable",nosignal:"No signal"};
+  $("#bars").innerHTML = order.filter(k=>S.tally[k]).map(k=>
+    `<div class="bar-row"><span>${names[k]}</span><span class="bar"><i style="width:${(100*S.tally[k]/total).toFixed(1)}%;background:${toneColor(k)}"></i></span><span>${fmtClock(S.tally[k])}</span></div>`
+  ).join("") || `<p class="muted small" style="margin:0">Nothing yet.</p>`;
+}
+
+function renderScenarios(){
+  $("#scenarios").innerHTML = SCENARIOS.map(([k,t,d])=>
+    `<label class="opt"><input type="radio" name="sc" value="${k}" ${!S.guided && S.scenario===k?"checked":""}><span>${t}<small>${d}</small></span></label>`).join("");
+  $("#scenarios").querySelectorAll("input").forEach(i=>i.addEventListener("change",()=>{
+    S.scenario=i.value; S.guided=false; $("#guided").checked=false; renderNowPlaying();
+  }));
+}
+function renderNowPlaying(){
+  const el=$("#nowPlaying");
+  if (S.source!=="sim"){ el.textContent=""; return; }
+  if (S.guided){ const g=sim.guidedInfo(); el.textContent = `Now playing: ${SCENARIOS.find(s=>s[0]===g.k)[1]}, next change in ${g.left} s`; }
+  else el.textContent = `Now playing: ${SCENARIOS.find(s=>s[0]===S.scenario)[1]}`;
+}
+function renderSource(){
+  const chip=$("#sourceChip");
+  const ble = S.source==="ble";
+  const connected = ble && S.bleDevice && S.bleDevice.gatt && S.bleDevice.gatt.connected;
+  chip.innerHTML = `<span class="dot ${!ble?"sim":connected?"":"off"}"></span><span>${!ble?"Simulated data":connected?"Pad connected":"Pad not connected"}</span>`;
+  $("#srcSim").setAttribute("aria-pressed", String(!ble));
+  $("#srcBle").setAttribute("aria-pressed", String(ble));
+  $("#simPanel").hidden = ble; $("#blePanel").hidden = !ble;
+}
+
+function toast(msg){
+  const t=$("#toast"); t.textContent=msg; t.hidden=false;
+  clearTimeout(toast.t); toast.t=setTimeout(()=>t.hidden=true, 3200);
+}
+
+document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>{
+  S.tab = b.dataset.tab;
+  document.querySelectorAll("nav button").forEach(x=>x.toggleAttribute("aria-current", x===b));
+  document.querySelectorAll("nav button[aria-current]").forEach(x=>x.setAttribute("aria-current","page"));
+  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on", v.id==="view-"+S.tab));
+  if (S.tab==="events"){ S.unseen=0; renderEvents(); }
+  if (S.tab==="summary") renderSummary();
+  if (S.tab==="pad") renderNowPlaying();
+  renderNow(); window.scrollTo(0,0);
+}));
+
+$("#symList").innerHTML = SYMPTOMS.map(s=>`<button value="${s}">${s}</button>`).join("");
+$("#feelBtn").addEventListener("click",()=>$("#feelDlg").showModal());
+$("#feelDlg").addEventListener("close",()=>{
+  const v=$("#feelDlg").returnValue; $("#feelDlg").returnValue="";
+  if (!v || v==="cancel") return;
+  const rhythm = STATUS[S.stable].title.toLowerCase();
+  const hr = S.hr && !["noise","nosignal","learning"].includes(S.stable) ? `, ${Math.round(S.hr)} bpm` : "";
+  S.events.unshift(Object.assign({id:Date.now(), kind:"symptom", type:S.stable, title:v, wall:new Date(),
+    detail:`You reported this. Rhythm at the time: ${rhythm}${hr}.`}, det.window(10)));
+  renderNow(); toast("Saved with your last 10 seconds of rhythm");
+});
+
+function exportFHIR(){
+  const pid="demo-patient", did="rhythm-patch-1", now=new Date();
+  const subject={reference:"Patient/"+pid}, device={reference:"Device/"+did};
+  const ucum={system:"http://unitsofmeasure.org"};
+  const entry=[];
+  entry.push({fullUrl:"urn:uuid:"+pid, resource:{resourceType:"Patient", id:pid, name:[{text:"Demo Patient"}]}},
+    {fullUrl:"urn:uuid:"+did, resource:{resourceType:"Device", id:did, deviceName:[{name:"Rhythm Patch prototype (BMEN 353)", type:"user-friendly-name"}]}});
+  const hrs=S.trend.map(p=>p.hr);
+  if (hrs.length) entry.push({resource:{resourceType:"Observation", status:"final",
+    category:[{coding:[{system:"http://terminology.hl7.org/CodeSystem/observation-category", code:"vital-signs"}]}],
+    code:{coding:[{system:"http://loinc.org", code:"8867-4", display:"Heart rate"}]},
+    subject, device, effectivePeriod:{start:S.startWall.toISOString(), end:now.toISOString()},
+    valueQuantity:{value:Math.round(mean(hrs)), unit:"beats/minute", ...ucum, code:"/min"}}});
+  S.events.slice().reverse().forEach(ev=>entry.push({resource:{resourceType:"Observation",
+    status: ev.kind==="symptom" ? "final" : "preliminary",
+    code:{coding:[{system:"urn:oid:2.16.840.1.113883.6.24", code:"131328", display:"MDC_ECG_ELEC_POTL"}], text:"ECG strip: "+ev.title},
+    subject, device, effectiveDateTime:ev.wall.toISOString(),
+    note:[{text:(ev.kind==="symptom"?"Patient-reported symptom. ":"Automatically flagged, needs clinician review. ")+ev.detail}],
+    component:[{code:{coding:[{system:"urn:oid:2.16.840.1.113883.6.24", code:"131329", display:"MDC_ECG_ELEC_POTL_I"}]},
+      valueSampledData:{origin:{value:0, unit:"mV", ...ucum, code:"mV"}, period:1000/FS, factor:0.001, dimensions:1,
+        data:Array.from(ev.data, v=>Math.round(v*1000)).join(" ")}}]}}));
+  const bundle={resourceType:"Bundle", type:"collection", timestamp:now.toISOString(), entry};
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(bundle,null,2)],{type:"application/fhir+json"}));
+  a.download=`rhythm-report-${now.toISOString().slice(0,10)}.json`;
+  document.body.append(a); a.click(); a.remove();
+  toast("Report saved as "+a.download);
+}
+$("#exportBtn").addEventListener("click", exportFHIR);
+
+let bleCarry="";
+async function connectBLE(){
+  if (!navigator.bluetooth){ toast("This browser can’t use Bluetooth. Try Chrome on Android or a computer."); return; }
+  try{
+    $("#bleStatus").textContent="Choose your pad from the list…";
+    const dev = await navigator.bluetooth.requestDevice({filters:[{services:[NUS_SERVICE]}]});
+    const server = await dev.gatt.connect();
+    const svc = await server.getPrimaryService(NUS_SERVICE);
+    const ch = await svc.getCharacteristic(NUS_TX);
+    await ch.startNotifications();
+    ch.addEventListener("characteristicvaluechanged", e=>{
+      bleCarry += new TextDecoder().decode(e.target.value);
+      const parts = bleCarry.split(/[ ,\s]+/); bleCarry = parts.pop();
+      for (const p of parts){ const v=parseFloat(p); if (!isNaN(v)) S.bleQueue.push(v/COUNTS_PER_MV); }
+    });
+    dev.addEventListener("gattserverdisconnected",()=>{ $("#bleStatus").textContent="Pad disconnected."; renderSource(); toast("Pad disconnected"); });
+    S.bleDevice=dev; restart("ble");
+    $("#bleStatus").textContent=`Connected to ${dev.name||"pad"}.`; toast("Pad connected");
+  }catch(err){
+    $("#bleStatus").textContent = err.name==="NotFoundError" ? "No pad chosen." : "Couldn’t connect: "+err.message;
+  }
+}
+$("#bleBtn").addEventListener("click", connectBLE);
+
+function restart(source=S.source){
+  S.source=source; sim=new Sim(); det=new Detector(); det.onBeat=onBeat;
+  Object.assign(S,{startWall:new Date(), noise:0, status:"learning", stable:"learning", hist:[], hr:null,
+    events:[], episode:null, trend:[], tally:{}, beats:0, unseen:0, bleQueue:[]});
+  clock.t0=performance.now(); clock.produced=0;
+  renderSource(); renderNow(); renderEvents(); if (S.tab==="summary") renderSummary(); renderNowPlaying();
+}
+$("#srcSim").addEventListener("click",()=>{ if (S.source!=="sim") restart("sim"); });
+$("#srcBle").addEventListener("click",()=>{ S.source="ble"; renderSource(); });
+$("#guided").addEventListener("change",e=>{ S.guided=e.target.checked; renderScenarios(); renderNowPlaying(); });
+$("#restartBtn").addEventListener("click",()=>{ restart(); toast("Started a new session"); });
+
+const clock={t0:performance.now(), produced:0};
+function step(x){ det.push(x); if (det.n % FS === 0) analyze(); }
+function frame(now){
+  if (S.source==="sim"){
+    let due = Math.floor((now-clock.t0)/1000*FS) - clock.produced;
+    if (due > FS){ clock.t0 = now - clock.produced/FS*1000; due = FS; }
+    for (let i=0;i<due;i++) step(sim.sample());
+    clock.produced += Math.max(due,0);
+  } else {
+    const k=Math.min(S.bleQueue.length, 2*FS);
+    for (let i=0;i<k;i++) step(S.bleQueue[i]);
+    S.bleQueue.splice(0,k);
+  }
+  if (S.tab==="now") drawLive();
+  requestAnimationFrame(frame);
+}
+
+readColors();
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{ readColors(); renderEvents(); });
+window.addEventListener("resize",()=>{ gridCache={}; });
+renderScenarios(); renderSource(); renderNow(); renderNowPlaying();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
